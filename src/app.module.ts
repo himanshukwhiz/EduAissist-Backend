@@ -29,9 +29,9 @@ import { Teacher } from './teachers/entities/teachers.entity';
       isGlobal: true,
     }),
     TypeOrmModule.forRoot({
-      type: 'mysql',
+      type: (process.env.DB_TYPE as any) || 'mysql',
       host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT || 3306),
+      port: Number(process.env.DB_PORT || (process.env.DB_TYPE === 'postgres' ? 5432 : 3306)),
       username: process.env.DB_USERNAME || 'root',
       // Use nullish coalescing so empty string is allowed for XAMPP root with no password
       password: (process.env.DB_PASSWORD ?? 'password'),
@@ -51,7 +51,16 @@ import { Teacher } from './teachers/entities/teachers.entity';
       // Disable auto schema sync by default to avoid destructive DDL on existing DBs
       // Enable explicitly by setting DB_SYNC=true in .env when you want TypeORM to manage schema
       synchronize: (process.env.DB_SYNC === 'true'),
-      logging: false,
+      logging: process.env.NODE_ENV === 'production' ? ['error'] : false,
+      // Support SSL for production databases
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      // Add connection timeout and retry options for Railway
+      extra: {
+        connectionLimit: 10,
+        connectTimeout: 60000,
+        acquireTimeout: 60000,
+        timeout: 60000,
+      },
     }),
     TypeOrmModule.forFeature([User]),
     AuthModule,
