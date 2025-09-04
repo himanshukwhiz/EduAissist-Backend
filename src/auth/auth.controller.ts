@@ -38,35 +38,6 @@ export class AuthController {
     }
   }
 
-  @Get('microsoft')
-  @UseGuards(AuthGuard('microsoft'))
-  async microsoftAuth() {
-    // Initiates Microsoft OAuth flow
-  }
-
-  @Get('microsoft/callback')
-  @UseGuards(AuthGuard('microsoft'))
-  @Redirect()
-  async microsoftAuthCallback(@Request() req) {
-    try {
-      const result = await this.authService.microsoftLogin(req);
-      
-      // Redirect to frontend with token
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return {
-        url: `${frontendUrl}/auth/callback?token=${result.access_token}`,
-      };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        // Redirect to unauthorized page
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        return {
-          url: `${frontendUrl}/auth/callback?error=unauthorized`,
-        };
-      }
-      throw error;
-    }
-  }
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
@@ -81,38 +52,4 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
-  @Post('test-login')
-  async testLogin(@Body() body: { userType: 'admin' | 'teacher' }) {
-    // Server-side demo login that maps to real DB users so profile works
-    const isAdmin = body?.userType === 'admin';
-    const email = isAdmin ? 'admin@eduaissist.com' : 'teacher@eduaissist.com';
-    const firstName = isAdmin ? 'Admin' : 'John';
-    const lastName = isAdmin ? 'User' : 'Smith';
-
-    let user = await this.usersService.findByEmail(email);
-    if (!user) {
-      return { message: 'User not authorized' };
-      // user = await this.usersService.create({
-      //   email,
-      //   firstName,
-      //   lastName,
-      //   role: (isAdmin ? 'admin' : 'teacher') as any,
-      //   isActive: true,
-      // } as any);
-    }
-
-    return this.authService.login(user);
-  }
-
-  @Post('test-unauthorized-login')
-  async testUnauthorizedLogin(@Body() body: { email: string }) {
-    // Test endpoint to simulate unauthorized user login
-    const user = await this.usersService.findByEmail(body.email);
-    
-    if (!user) {
-      throw new UnauthorizedException('User not authorized to access this platform');
-    }
-    
-    return this.authService.login(user);
-  }
 }

@@ -56,26 +56,6 @@ export class AuthService {
     return this.login(user);
   }
 
-  async microsoftLogin(req: any) {
-    const { user: oauthUser } = req;
-    
-    // Check if user exists in our database
-    const existingUser = await this.usersService.findByEmail(oauthUser.email);
-    
-    if (!existingUser) {
-      throw new UnauthorizedException('User not authorized to access this platform');
-    }
-    
-    // Update OAuth data for existing user
-    const user = await this.usersService.createOrUpdateOAuthUser({
-      email: oauthUser.email,
-      firstName: oauthUser.firstName,
-      lastName: oauthUser.lastName,
-      microsoftId: oauthUser.microsoftId,
-    });
-
-    return this.login(user);
-  }
 
   async getProfile(userId: string): Promise<User> {
     return this.usersService.findOne(userId);
