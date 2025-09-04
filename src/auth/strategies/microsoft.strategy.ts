@@ -9,7 +9,12 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
     super({
       clientID: configService.get<string>('MICROSOFT_CLIENT_ID'),
       clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET'),
-      callbackURL: `${configService.get<string>('BACKEND_BASE_URL', '')}/auth/microsoft/callback` || '/auth/microsoft/callback',
+      callbackURL: (() => {
+        const baseUrl = configService.get<string>('BACKEND_BASE_URL') || 'http://localhost:4000';
+        // Remove trailing slash if present to avoid double slashes
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        return `${cleanBaseUrl}/auth/microsoft/callback`;
+      })(),
       scope: ['user.read'],
     });
   }

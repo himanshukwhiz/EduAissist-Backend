@@ -12,6 +12,11 @@ async function bootstrap() {
     console.log('DB_USERNAME:', process.env.DB_USERNAME);
     console.log('DB_DATABASE:', process.env.DB_DATABASE);
     console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? 'SET' : 'NOT SET');
+    
+    console.log('\nOAuth Configuration:');
+    console.log('BACKEND_BASE_URL:', process.env.BACKEND_BASE_URL);
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+    console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
   }
   
   const app = await NestFactory.create(AppModule);
