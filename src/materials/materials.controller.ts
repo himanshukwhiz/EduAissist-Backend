@@ -53,7 +53,15 @@ export class MaterialsController {
     const storagePath = `materials/${teacherId}/${Date.now()}_${file.originalname}`;
     return (async () => {
       const pdfCloudUrl = await this.storage.uploadBuffer(storagePath, file.buffer, file.mimetype);
-      const collectionId =  await this.chroma.createCollection(file.originalname);
+      
+      // Try to create ChromaDB collection, but don't fail if ChromaDB is unavailable
+      let collectionId = vectorDbCollectionId || `fallback_${Date.now()}`;
+      try {
+        collectionId = await this.chroma.createCollection(file.originalname);
+        console.log(`[MaterialsController] ChromaDB collection created: ${collectionId}`);
+      } catch (error) {
+        console.warn(`[MaterialsController] ChromaDB unavailable, using fallback collection ID: ${collectionId}`, error.message);
+      }
       
       const saved = await this.materialsService.createStudy({
         teacherId,
