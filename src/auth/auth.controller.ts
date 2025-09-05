@@ -52,4 +52,22 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @Post('demo-login')
+  async demoLogin(@Body() body: { email: string }) {
+    try {
+      // Find the demo user by email
+      const user = await this.usersService.findByEmail(body.email);
+      if (!user) {
+        throw new UnauthorizedException('Demo user not found');
+      }
+
+      // Generate JWT token for demo user
+      const result = await this.authService.login(user);
+      return result;
+    } catch (error) {
+      console.error('Demo login error:', error);
+      throw new UnauthorizedException('Demo login failed');
+    }
+  }
+
 }
