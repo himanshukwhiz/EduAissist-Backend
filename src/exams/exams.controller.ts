@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Delete, Query, Param, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Exam } from './entities/exam.entity';
@@ -28,6 +28,43 @@ export class ExamsController {
   async count() {
     const total = await this.repo.count();
     return { total };
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const exam = await this.repo.findOne({ 
+      where: { id },
+      relations: ['class', 'subject', 'questions'] 
+    });
+    if (!exam) {
+      throw new Error('Exam not found');
+    }
+    return {
+      ...exam,
+      className: (exam as any).class?.name ?? undefined,
+      subjectName: (exam as any).subject?.name ?? undefined,
+    };
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    try {
+      const exam = await this.repo.findOne({ where: { id } });
+      if (!exam) {
+        throw new Error('Exam not found');
+      }
+      
+      await this.repo.delete(id);
+      
+      return {
+        success: true,
+        message: 'Question paper deleted successfully',
+        deletedExam: exam,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      throw error;
+    }
   }
 }
 

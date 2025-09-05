@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UploadedFile, UseInterceptors, Body, UseGuards, Query, Header, Req, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, UploadedFile, UseInterceptors, Body, UseGuards, Query, Header, Req, Param } from '@nestjs/common';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -345,6 +345,28 @@ export class MaterialsController {
         error: error.message,
         timestamp: new Date().toISOString()
       };
+    }
+  }
+
+  @Get('study/:id')
+  async getStudyMaterial(@Param('id') id: string) {
+    return this.materialsService.findOne(id);
+  }
+
+  @Delete('study/:id')
+  async deleteStudyMaterial(@Param('id') id: string, @Req() req: Request) {
+    try {
+      // Get teacher ID from JWT token if auth is enabled
+      const teacherId = (req as any).user?.id;
+      const result = await this.materialsService.delete(id, teacherId);
+      
+      return {
+        success: true,
+        message: result.message,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      throw error; // Let NestJS handle the error response
     }
   }
 }

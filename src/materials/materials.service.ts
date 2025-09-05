@@ -122,6 +122,44 @@ export class MaterialsService {
     const total = await this.materialsRepo.count({ where: { type: MaterialType.STUDY } });
     return { total };
   }
+
+  async findOne(id: string) {
+    const material = await this.materialsRepo.findOne({ 
+      where: { id },
+      select: {
+        id: true,
+        type: true,
+        teacherId: true,
+        class: true,
+        subject: true,
+        pdfCloudUrl: true,
+        vectorDbCollectionId: true,
+        originalName: true,
+        mimeType: true,
+        size: true,
+        createdAt: true,
+        updatedAt: true,
+      } as any,
+    });
+    
+    if (!material) {
+      throw new BadRequestException('Material not found');
+    }
+    
+    return material;
+  }
+
+  async delete(id: string, teacherId?: string) {
+    const material = await this.findOne(id);
+    
+    // Optional: Check if the material belongs to the teacher (if teacherId is provided)
+    if (teacherId && material.teacherId !== teacherId) {
+      throw new BadRequestException('You can only delete your own materials');
+    }
+    
+    await this.materialsRepo.delete(id);
+    return { message: 'Material deleted successfully', deletedMaterial: material };
+  }
 }
 
 
