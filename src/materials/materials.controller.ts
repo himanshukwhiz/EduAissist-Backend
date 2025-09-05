@@ -24,6 +24,11 @@ export class MaterialsController {
     private readonly pdfIngest: PdfIngestService,
   ) {}
 
+  @Get('count')
+  async count() {
+    return this.materialsService.count();
+  }
+
   @Get('study')
   @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
   @Header('Pragma', 'no-cache')

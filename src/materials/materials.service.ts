@@ -117,6 +117,11 @@ export class MaterialsService {
       pages: Math.ceil(total / params.limit),
     };
   }
+
+  async count() {
+    const total = await this.materialsRepo.count({ where: { type: MaterialType.STUDY } });
+    return { total };
+  }
 }
 
 

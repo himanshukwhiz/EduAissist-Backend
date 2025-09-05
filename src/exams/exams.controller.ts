@@ -23,6 +23,12 @@ export class ExamsController {
     }));
     return { items, total, page: Number(page), limit: take, pages: Math.ceil(total / take) };
   }
+
+  @Get('count')
+  async count() {
+    const total = await this.repo.count();
+    return { total };
+  }
 }
 
 
