@@ -4,7 +4,30 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ChromaService {
-  private base = process.env.CHROMA_BASE_URL || 'http://localhost:8000';
+  private base: string;
+
+  constructor() {
+    // Support multiple environment variable formats
+    this.base = process.env.CHROMA_URL || 
+                process.env.CHROMA_BASE_URL || 
+                this.buildChromaUrl() ||
+                'http://localhost:8000';
+    
+    console.log(`[ChromaService] Initialized with base URL: ${this.base}`);
+  }
+
+  private buildChromaUrl(): string | null {
+    const host = process.env.CHROMA_HOST;
+    const port = process.env.CHROMA_PORT;
+    const protocol = process.env.CHROMA_PROTOCOL || 'http';
+    
+    if (host) {
+      const portSuffix = port && port !== '80' && port !== '443' ? `:${port}` : '';
+      return `${protocol}://${host}${portSuffix}`;
+    }
+    
+    return null;
+  }
 
   async createCollection(name: string): Promise<string> {
     try {
@@ -653,6 +676,39 @@ export class ChromaService {
         model: process.env.OLLAMA_MODEL || 'mistral',
         error: error.message 
       };
+    }
+  }
+
+  // Check ChromaDB health
+  async isHealthy(): Promise<boolean> {
+    try {
+      console.log(`[ChromaService] Checking ChromaDB health at: ${this.base}/api/v1/heartbeat`);
+      const response = await axios.get(`${this.base}/api/v1/heartbeat`, { 
+        timeout: 10000, // Increased timeout for external services
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        // Handle HTTPS properly
+        validateStatus: (status) => status < 500
+      });
+      
+      console.log(`[ChromaService] ChromaDB health check response:`, {
+        status: response.status,
+        data: response.data,
+        baseUrl: this.base
+      });
+      
+      return response.status === 200;
+    } catch (error: any) {
+      console.error(`[ChromaService] ChromaDB health check failed:`, {
+        message: error.message,
+        code: error.code,
+        baseUrl: this.base,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      return false;
     }
   }
 
