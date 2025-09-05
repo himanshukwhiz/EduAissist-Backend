@@ -36,10 +36,10 @@ export class ChromaService {
       
       console.log(`[ChromaService] Creating collection with ID: ${id} for source: ${name}`);
       
-      const response = await axios.post(`${this.base}/api/v2/collections`, { 
+      // Use v1 API (confirmed working in ChromaDB 0.4.15)
+      const response = await axios.post(`${this.base}/api/v1/collections`, { 
         name: id, 
-        metadata: { source: name },
-        embedding_function: 'all-MiniLM-L6-v2' // Use a good default embedding model
+        metadata: { source: name }
       }, {
         timeout: 10000,
         headers: {
@@ -106,8 +106,8 @@ export class ChromaService {
       console.log("emnedd",{
         embeddings: documentsWithEmbeddings.map((d) => d.embedding)
       });
-      // Upsert documents with embeddings to ChromaDB
-      const res = await axios.post(`${this.base}/api/v2/collections/${actualCollectionId}/add`, {
+      // Upsert documents with embeddings to ChromaDB using v1 API
+      const res = await axios.post(`${this.base}/api/v1/collections/${actualCollectionId}/upsert`, {
         ids: documentsWithEmbeddings.map((d) => d.id),
         documents: documentsWithEmbeddings.map((d) => d.text),
         metadatas: documentsWithEmbeddings.map((d) => d.metadata),
@@ -124,7 +124,7 @@ export class ChromaService {
 
   async fetchTopK(collectionId: string, query: string, k = 12): Promise<string[]> {
     try {
-      const res = await axios.post(`${this.base}/api/v2/collections/${collectionId}/query`, {
+      const res = await axios.post(`${this.base}/api/v1/collections/${collectionId}/query`, {
         query_texts: [query],
         n_results: k,
       }, { timeout: 15000 });
@@ -138,13 +138,13 @@ export class ChromaService {
   }
 
   async getCollection(collectionId: string): Promise<any> {
-    const res = await axios.get(`${this.base}/api/v2/collections/${collectionId}`);
+    const res = await axios.get(`${this.base}/api/v1/collections/${collectionId}`);
     return res.data;
   }
   
   async count(collectionId: string): Promise<number> {
-    console.log("*****url is  ==> count *******",`${this.base}/api/v2/collections/${collectionId}/count`);
-    const res = await axios.get(`${this.base}/api/v2/collections/${collectionId}/count`);
+    console.log("*****url is  ==> count *******",`${this.base}/api/v1/collections/${collectionId}/count`);
+    const res = await axios.get(`${this.base}/api/v1/collections/${collectionId}/count`);
     console.log("*****Result cout ns {cnt} *******",res);
     const cnt = res.data;
     console.log("*****Result cout ns {cnt} *******",cnt);
@@ -152,8 +152,8 @@ export class ChromaService {
   }
   
   async getDocuments(collectionId: string): Promise<string[]> {
-    console.log("*****url is  ==> getDocuments *******",`${this.base}/api/v2/collections/${collectionId}/get`);
-    const res = await axios.post(`${this.base}/api/v2/collections/${collectionId}/get`, {
+    console.log("*****url is  ==> getDocuments *******",`${this.base}/api/v1/collections/${collectionId}/get`);
+    const res = await axios.post(`${this.base}/api/v1/collections/${collectionId}/get`, {
       include: ["documents"],
     });
     console.log("*****Result getDocuments ns {res} *******",res);
@@ -162,7 +162,7 @@ export class ChromaService {
 
   async collectionExists(collectionId: string): Promise<any> {
     try {
-      const res =await axios.get(`${this.base}/api/v2/collections/${collectionId}`);
+      const res =await axios.get(`${this.base}/api/v1/collections/${collectionId}`);
       console.log("*****collectionExists ==> collectionExists *******",res.data);
       return res.data;
     } catch (error: any) {
@@ -201,11 +201,11 @@ export class ChromaService {
       console.log(`[ChromaService] Testing connection to ChromaDB at: ${this.base}`);
       
       // Test 1: Check if ChromaDB is running
-      const heartbeat = await axios.get(`${this.base}/api/v2/heartbeat`, { timeout: 5000 });
+      const heartbeat = await axios.get(`${this.base}/api/v1/heartbeat`, { timeout: 5000 });
       console.log(`[ChromaService] ChromaDB heartbeat response:`, heartbeat.data);
       
       // Test 2: List collections
-      const collections = await axios.get(`${this.base}/api/v2/collections`, { timeout: 5000 });
+      const collections = await axios.get(`${this.base}/api/v1/collections`, { timeout: 5000 });
       console.log(`[ChromaService] Available collections:`, collections.data);
       
       return {
@@ -337,9 +337,9 @@ export class ChromaService {
       };
 
       console.log(`[ChromaService] Test payload:`, testPayload);
-      console.log(`[ChromaService] Making request to: ${this.base}/api/v2/collections/${apiIdentifier}/add`);
+      console.log(`[ChromaService] Making request to: ${this.base}/api/v1/collections/${apiIdentifier}/upsert`);
 
-      const res = await axios.post(`${this.base}/api/v2/collections/${apiIdentifier}/add`, testPayload, {
+      const res = await axios.post(`${this.base}/api/v1/collections/${apiIdentifier}/upsert`, testPayload, {
         timeout: 10000,
         headers: {
           'Content-Type': 'application/json'
@@ -374,7 +374,7 @@ export class ChromaService {
         // Let's try to list all collections to see what's actually available
         try {
           console.log(`[ChromaService] Attempting to list all collections...`);
-          const collectionsRes = await axios.get(`${this.base}/api/v2/collections`);
+          const collectionsRes = await axios.get(`${this.base}/api/v1/collections`);
           console.log(`[ChromaService] Available collections:`, collectionsRes.data);
         } catch (listError: any) {
           console.error(`[ChromaService] Failed to list collections:`, listError.message);
@@ -409,8 +409,8 @@ export class ChromaService {
       
       // Test 1: Direct GET request
       try {
-        console.log(`[ChromaService] Test 1: Direct GET request to /api/v2/collections/${collectionId}`);
-        const getRes = await axios.get(`${this.base}/api/v2/collections/${collectionId}`);
+        console.log(`[ChromaService] Test 1: Direct GET request to /api/v1/collections/${collectionId}`);
+        const getRes = await axios.get(`${this.base}/api/v1/collections/${collectionId}`);
         results.tests.directGet = { success: true, status: getRes.status, data: getRes.data };
         console.log(`[ChromaService] Direct GET successful:`, getRes.status);
       } catch (getError: any) {
@@ -421,7 +421,7 @@ export class ChromaService {
       // Test 2: Collection count
       try {
         console.log(`[ChromaService] Test 2: Collection count request`);
-        const countRes = await axios.post(`${this.base}/api/v2/collections/${collectionId}/count`);
+        const countRes = await axios.post(`${this.base}/api/v1/collections/${collectionId}/count`);
         results.tests.count = { success: true, status: countRes.status, data: countRes.data };
         console.log(`[ChromaService] Count successful:`, countRes.status);
       } catch (countError: any) {
@@ -432,7 +432,7 @@ export class ChromaService {
       // Test 3: List all collections
       try {
         console.log(`[ChromaService] Test 3: List all collections`);
-        const listRes = await axios.get(`${this.base}/api/v2/collections`);
+        const listRes = await axios.get(`${this.base}/api/v1/collections`);
         results.tests.listAll = { success: true, status: listRes.status, data: listRes.data };
         console.log(`[ChromaService] List all successful:`, listRes.status);
       } catch (listError: any) {
@@ -464,7 +464,7 @@ export class ChromaService {
       
       // If direct access fails, try to find the collection by listing all
       try {
-        const collectionsRes = await axios.get(`${this.base}/api/v2/collections`);
+        const collectionsRes = await axios.get(`${this.base}/api/v1/collections`);
         const collections = collectionsRes.data;
         
         console.log(`[ChromaService] Available collections:`, collections);
@@ -501,7 +501,7 @@ export class ChromaService {
   async listAllCollections(): Promise<{ success: boolean; collections: any[]; error?: string }> {
     try {
       console.log(`[ChromaService] Listing all collections from ChromaDB...`);
-      const response = await axios.get(`${this.base}/api/v2/collections`);
+      const response = await axios.get(`${this.base}/api/v1/collections`);
       const collections = response.data;
       
       console.log(`[ChromaService] Found ${collections.length} collections:`, collections);
@@ -682,14 +682,14 @@ export class ChromaService {
   // Check ChromaDB health
   async isHealthy(): Promise<boolean> {
     try {
-      console.log(`[ChromaService] Checking ChromaDB health at: ${this.base}/api/v2/heartbeat`);
-      const response = await axios.get(`${this.base}/api/v2/heartbeat`, { 
-        timeout: 10000, // Increased timeout for external services
+      // Use v1 API (confirmed working in ChromaDB 0.4.15)
+      console.log(`[ChromaService] Checking ChromaDB health at: ${this.base}/api/v1/heartbeat`);
+      const response = await axios.get(`${this.base}/api/v1/heartbeat`, { 
+        timeout: 10000,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        // Handle HTTPS properly
         validateStatus: (status) => status < 500
       });
       
