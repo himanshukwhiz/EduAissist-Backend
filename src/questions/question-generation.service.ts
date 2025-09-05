@@ -106,7 +106,7 @@ export class QuestionGenerationService {
     };
 
     this.logger.log(`[QuestionGen] Using ${this.useGemini ? 'Gemini AI' : 'Ollama'} for question generation`);
-    this.logger.log(`[QuestionGen] Question counts: MCQs=${questionCounts.mcqCount}, Short=${questionCounts.shortCount}, Long=${questionCounts.longCount}`);
+    this.logger.log(`[QuestionGen] Question counts: MCQs=${questionCounts.mcqCount}| Short=${questionCounts.shortCount}| Long=${questionCounts.longCount}`);
 
     // Use Gemini-based generation if enabled, otherwise fall back to Ollama
     if (this.useGemini) {
