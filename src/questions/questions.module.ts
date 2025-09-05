@@ -6,11 +6,18 @@ import { Material } from '../materials/entities/material.entity';
 import { QuestionsController } from './questions.controller';
 import { QuestionGenerationService } from './question-generation.service';
 import { ChromaService } from '../materials/ingest/chroma.service';
+import { GeminiService } from './services/gemini.service';
+import { ChromaQuestionService } from './services/chroma-question.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Question, Exam, Material])],
   controllers: [QuestionsController],
-  providers: [QuestionGenerationService, ChromaService],
-  exports: [QuestionGenerationService],
+  providers: [
+    QuestionGenerationService, 
+    ChromaService, 
+    GeminiService, 
+    ChromaQuestionService
+  ],
+  exports: [QuestionGenerationService, GeminiService, ChromaQuestionService],
 })
 export class QuestionsModule {}

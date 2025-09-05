@@ -86,6 +86,34 @@ export class QuestionsController {
     if (!q) return null
     return this.qg.regenerateQuestion(q)
   }
+
+  @Post('generate-gemini/:examId')
+  async generateWithGemini(
+    @Param('examId') examId: string,
+    @Body() body: { 
+      maxMarks: number; 
+      weightage: { mcq: number; short: number; long: number }; 
+      marksPerQuestion?: { mcq: number; short: number; long: number };
+      questionCounts?: { mcqCount: number; shortCount: number; longCount: number };
+      collectionId?: string; 
+      materialId?: string;
+      subject?: string;
+      grade?: string;
+    },
+    @Req() req: Request,
+  ) {
+    const userId = (req as any)?.user?.id as string | undefined;
+    
+    console.log('[QuestionsController] Generating with Gemini:', body);
+    
+    return this.qg.generateExamPaperWithGemini(examId, body);
+  }
+
+  @Post('test-system/:collectionId')
+  async testSystem(@Param('collectionId') collectionId: string) {
+    console.log('[QuestionsController] Testing system with collection:', collectionId);
+    return this.qg.testQuestionGenerationSystem(collectionId);
+  }
 }
 
 

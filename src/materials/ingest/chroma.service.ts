@@ -151,12 +151,12 @@ export class ChromaService {
     return res.data;
   }
   
+
   async getDocuments(collectionId: string): Promise<string[]> {
-    console.log("*****url is  ==> getDocuments *******",`${this.base}/api/v1/collections/${collectionId}/get`);
-    const res = await axios.post(`${this.base}/api/v1/collections/${collectionId}/get`, {
+    const resCollection =await axios.get(`${this.base}/api/v1/collections/${collectionId}`);
+    const res = await axios.post(`${this.base}/api/v1/collections/${resCollection.data.id}/get`, {
       include: ["documents"],
     });
-    console.log("*****Result getDocuments ns {res} *******",res);
     return res.data?.documents || [];
   }
 
