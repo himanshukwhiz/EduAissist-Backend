@@ -106,7 +106,7 @@ export class QuestionGenerationService {
     };
 
     this.logger.log(`[QuestionGen] Using ${this.useGemini ? 'Gemini AI' : 'Ollama'} for question generation`);
-    this.logger.log(`[QuestionGen] Question counts: MCQs=${questionCounts.mcqCount}| Short=${questionCounts.shortCount}| Long=${questionCounts.longCount}`);
+    this.logger.log(`[QuestionGen] Question counts: MCQs=${questionCounts.mcqCount}, Short=${questionCounts.shortCount}, Long=${questionCounts.longCount}`);
 
     // Use Gemini-based generation if enabled, otherwise fall back to Ollama
     if (this.useGemini) {
@@ -453,6 +453,85 @@ Generate exactly ${args.questionCounts.mcqCount} MCQs, ${args.questionCounts.sho
   }
 
   async regenerateQuestion(question: Question): Promise<Question> {
+    this.logger.log(`[QuestionGen] Regenerating ${question.type} question worth ${question.marks} marks`);
+    
+    try {
+      // Use Gemini service for regeneration if available, otherwise fallback to Ollama
+      if (this.useGemini) {
+        return await this.regenerateWithGemini(question);
+      } else {
+        return await this.regenerateWithOllama(question);
+      }
+    } catch (error) {
+      this.logger.error(`[QuestionGen] Failed to regenerate question: ${error.message}`);
+      // Return the original question if regeneration fails
+      return question;
+    }
+  }
+
+  /**
+   * Regenerate question using Gemini API
+   */
+  private async regenerateWithGemini(question: Question): Promise<Question> {
+    try {
+      // Determine question type for Gemini service
+      let questionType: 'mcq' | 'short' | 'long';
+      switch (question.type) {
+        case QuestionType.MULTIPLE_CHOICE:
+          questionType = 'mcq';
+          break;
+        case QuestionType.SHORT_ANSWER:
+          questionType = 'short';
+          break;
+        case QuestionType.LONG_ANSWER:
+          questionType = 'long';
+          break;
+        default:
+          questionType = 'short';
+      }
+
+      // Create a regeneration request
+      const request: QuestionGenerationRequest = {
+        chunk: `Regenerate this question: ${question.questionText}`,
+        questionType: questionType,
+        subject: 'General', // We don't have subject context in regeneration
+        grade: 'General',   // We don't have grade context in regeneration
+        marks: question.marks,
+        difficulty: this.mapDifficultyToString(question.difficulty)
+      };
+
+      const generatedQuestion = await this.geminiService.generateQuestion(request);
+
+      // Update the question with regenerated content
+      question.questionText = generatedQuestion.text;
+      question.difficulty = this.mapDifficulty(generatedQuestion.difficulty);
+      question.marks = generatedQuestion.marks;
+      
+      if (question.type === QuestionType.MULTIPLE_CHOICE && generatedQuestion.options) {
+        question.options = generatedQuestion.options;
+      }
+      
+      if (generatedQuestion.answer) {
+        question.correctAnswer = generatedQuestion.answer;
+      }
+      
+      if (generatedQuestion.explanation) {
+        question.explanation = generatedQuestion.explanation;
+      }
+
+      this.logger.log(`[QuestionGen] Successfully regenerated question using Gemini`);
+      return this.questionRepo.save(question);
+
+    } catch (error) {
+      this.logger.error(`[QuestionGen] Gemini regeneration failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Regenerate question using Ollama (fallback method)
+   */
+  private async regenerateWithOllama(question: Question): Promise<Question> {
     // Try model regeneration based on question meta; fallback to deterministic text
     const prompt = `Regenerate a ${question.type} question worth ${question.marks} marks. Return JSON {"text":"...","options":[...],"answer":"..."}`;
     let text = '';
@@ -473,6 +552,17 @@ Generate exactly ${args.questionCounts.mcqCount} MCQs, ${args.questionCounts.sho
     if (question.type === QuestionType.MULTIPLE_CHOICE && options) question.options = options;
     if (answer) question.correctAnswer = answer;
     return this.questionRepo.save(question);
+  }
+
+  /**
+   * Map difficulty enum to string for Gemini service
+   */
+  private mapDifficultyToString(difficulty: DifficultyLevel): 'easy' | 'medium' | 'hard' {
+    switch (difficulty) {
+      case DifficultyLevel.EASY: return 'easy';
+      case DifficultyLevel.HARD: return 'hard';
+      default: return 'medium';
+    }
   }
 
   /**

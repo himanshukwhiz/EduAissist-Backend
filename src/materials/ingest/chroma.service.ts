@@ -593,26 +593,33 @@ export class ChromaService {
     }
   }
 
-  // Generate embeddings for text using Ollama
+  // Generate embeddings for text using Gemini API
   async generateEmbedding(text: string): Promise<number[]> {
     try {
       console.log(`[ChromaService] Generating embedding for text of length: ${text.length}`);
       
-      // Ollama configuration
-      const ollamaBase = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-      const model = process.env.OLLAMA_MODEL_NOMIC_EMBED || 'mistral';
-      const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS || 60000); // Increased to 60 seconds
+      // Gemini API configuration
+      const apiKey = process.env.GEMINI_API_KEY;
+      const model = process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004';
+      const timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS || 30000);
       
-      console.log(`[ChromaService] Using Ollama at ${ollamaBase} with model ${model}`);
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY environment variable is required');
+      }
       
-      // Call Ollama's embedding API
+      console.log(`[ChromaService] Using Gemini API with model ${model}`);
+      
+      // Call Gemini's embedding API
       const response = await axios.post(
-        `${ollamaBase}/api/embed`,
-        { 
-          model: model, 
-          input: text 
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,
+        {
+          content: {
+            parts: [{
+              text: text
+            }]
+          }
         },
-        { 
+        {
           timeout: timeoutMs,
           headers: {
             'Content-Type': 'application/json'
@@ -621,12 +628,12 @@ export class ChromaService {
       );
       
       // Extract the embedding vector from the response
-      console.log("embedding",response);
-      const embedding = response.data?.embeddings;
+      console.log("embedding", response.data);
+      const embedding = response.data?.embedding?.values;
       
       if (!embedding || !Array.isArray(embedding)) {
-        console.error(`[ChromaService] Invalid embedding response from Ollama:`, response.data);
-        throw new Error('Invalid embedding response from Ollama');
+        console.error(`[ChromaService] Invalid embedding response from Gemini:`, response.data);
+        throw new Error('Invalid embedding response from Gemini');
       }
       
       console.log(`[ChromaService] Generated embedding with ${embedding.length} dimensions`);
@@ -636,44 +643,54 @@ export class ChromaService {
     } catch (error: any) {
       console.error(`[ChromaService] Failed to generate embedding:`, error.message);
       
-      // If Ollama fails, we can't proceed without embeddings
+      // If Gemini fails, we can't proceed without embeddings
       // You might want to implement a fallback strategy here
-      throw new Error(`Failed to generate embedding using Ollama: ${error.message}`);
+      throw new Error(`Failed to generate embedding using Gemini: ${error.message}`);
     }
   }
 
-  // Check if Ollama is available and ready for embedding generation
-  async checkOllamaAvailability(): Promise<{ available: boolean; model: string; error?: string }> {
+  // Check if Gemini API is available and ready for embedding generation
+  async checkGeminiAvailability(): Promise<{ available: boolean; model: string; error?: string }> {
     try {
-      const ollamaBase = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-      const model = process.env.OLLAMA_MODEL || 'mistral';
+      const apiKey = process.env.GEMINI_API_KEY;
+      const model = process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004';
       
-      console.log(`[ChromaService] Checking Ollama availability at ${ollamaBase} with model ${model}`);
-      
-      // First check if Ollama is running
-      const healthResponse = await axios.get(`${ollamaBase}/api/tags`, { timeout: 5000 });
-      
-      if (healthResponse.status !== 200) {
-        return { available: false, model, error: 'Ollama health check failed' };
+      if (!apiKey) {
+        return { available: false, model, error: 'GEMINI_API_KEY environment variable is not set' };
       }
       
-      // Check if the specific model is available
-      const models = healthResponse.data?.models || [];
-      const modelExists = models.some((m: any) => m.name === model);
+      console.log(`[ChromaService] Checking Gemini API availability with model ${model}`);
       
-      if (!modelExists) {
-        console.warn(`[ChromaService] Model ${model} not found in available models:`, models.map((m: any) => m.name));
-        return { available: false, model, error: `Model ${model} not found` };
+      // Test the Gemini API with a simple embedding request
+      const testResponse = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,
+        {
+          content: {
+            parts: [{
+              text: 'test'
+            }]
+          }
+        },
+        {
+          timeout: 10000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (testResponse.status !== 200) {
+        return { available: false, model, error: 'Gemini API health check failed' };
       }
       
-      console.log(`[ChromaService] Ollama is available with model ${model}`);
+      console.log(`[ChromaService] Gemini API is available with model ${model}`);
       return { available: true, model };
       
     } catch (error: any) {
-      console.error(`[ChromaService] Ollama availability check failed:`, error.message);
+      console.error(`[ChromaService] Gemini API availability check failed:`, error.message);
       return { 
         available: false, 
-        model: process.env.OLLAMA_MODEL || 'mistral',
+        model: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
         error: error.message 
       };
     }
@@ -712,49 +729,58 @@ export class ChromaService {
     }
   }
 
-  // Check Ollama health and model status
-  async checkOllamaHealth(): Promise<{ healthy: boolean; model: string; details: any }> {
+  // Check Gemini API health and model status
+  async checkGeminiHealth(): Promise<{ healthy: boolean; model: string; details: any }> {
     try {
-      const ollamaBase = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-      const model = process.env.OLLAMA_MODEL || 'mistral';
+      const apiKey = process.env.GEMINI_API_KEY;
+      const model = process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004';
       
-      console.log(`[ChromaService] Checking Ollama health at ${ollamaBase}`);
-      
-      // Check if Ollama is responding
-      const healthResponse = await axios.get(`${ollamaBase}/api/tags`, { timeout: 10000 });
-      
-      if (healthResponse.status !== 200) {
+      if (!apiKey) {
         return { 
           healthy: false, 
           model, 
-          details: { error: 'Ollama health check failed', status: healthResponse.status } 
+          details: { error: 'GEMINI_API_KEY environment variable is not set' } 
         };
       }
       
-      // Check available models
-      const models = healthResponse.data?.models || [];
-      const modelInfo = models.find((m: any) => m.name === model);
+      console.log(`[ChromaService] Checking Gemini API health with model ${model}`);
       
-      if (!modelInfo) {
+      // Test the Gemini API with a simple embedding request
+      const testResponse = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`,
+        {
+          content: {
+            parts: [{
+              text: 'health check test'
+            }]
+          }
+        },
+        {
+          timeout: 10000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (testResponse.status !== 200) {
         return { 
           healthy: false, 
           model, 
-          details: { 
-            error: `Model ${model} not found`, 
-            availableModels: models.map((m: any) => m.name) 
-          } 
+          details: { error: 'Gemini API health check failed', status: testResponse.status } 
         };
       }
       
-      // Check model size and last modified
+      // Extract embedding info from response
+      const embedding = testResponse.data?.embedding?.values;
       const modelDetails = {
-        name: modelInfo.name,
-        size: modelInfo.size,
-        modifiedAt: modelInfo.modified_at,
-        available: true
+        name: model,
+        embeddingDimensions: embedding?.length || 0,
+        available: true,
+        apiKeyConfigured: true
       };
       
-      console.log(`[ChromaService] Ollama is healthy with model ${model}:`, modelDetails);
+      console.log(`[ChromaService] Gemini API is healthy with model ${model}:`, modelDetails);
       
       return { 
         healthy: true, 
@@ -763,10 +789,10 @@ export class ChromaService {
       };
       
     } catch (error: any) {
-      console.error(`[ChromaService] Ollama health check failed:`, error.message);
+      console.error(`[ChromaService] Gemini API health check failed:`, error.message);
       return { 
         healthy: false, 
-        model: process.env.OLLAMA_MODEL || 'mistral',
+        model: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
         details: { error: error.message, code: error.code } 
       };
     }

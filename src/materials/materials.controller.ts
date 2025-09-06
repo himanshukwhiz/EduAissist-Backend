@@ -305,25 +305,6 @@ export class MaterialsController {
     }
   }
 
-  @Get('ollama-health')
-  async checkOllamaHealth() {
-    try {
-      const healthStatus = await this.chroma.checkOllamaHealth();
-      
-      return {
-        success: true,
-        ollamaHealth: healthStatus,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
   @Get('test-embedding')
   async testEmbedding() {
     try {
