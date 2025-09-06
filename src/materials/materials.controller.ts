@@ -272,62 +272,7 @@ export class MaterialsController {
     }
   }
 
-  @Get('test-embeddings')
-  async testEmbeddings() {
-    try {
-      // Test creating a collection with embeddings
-      const collectionId = await this.chroma.createCollection('test-embeddings');
-      
-      // Test upserting documents with embeddings
-      const testDocs = [
-        { id: 'test_1', text: 'This is a test document for embedding testing.', metadata: { test: true, type: 'embedding_test' } },
-        { id: 'test_2', text: 'Another test document to verify embeddings work correctly.', metadata: { test: true, type: 'embedding_test' } }
-      ];
-      
-      await this.chroma.upsertDocuments(collectionId, testDocs);
-      
-      // Test querying with embeddings
-      const results = await this.chroma.fetchTopK(collectionId, 'test document', 5);
-      
-      return {
-        success: true,
-        collectionId,
-        upsertSuccess: true,
-        queryResults: results,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
 
-  @Get('test-embedding')
-  async testEmbedding() {
-    try {
-      const testText = 'This is a test text for embedding generation.';
-      const embedding = await this.chroma.generateEmbedding(testText);
-      
-      return {
-        success: true,
-        text: testText,
-        embedding: {
-          dimensions: embedding.length,
-          sample: embedding.slice(0, 5) // Show first 5 dimensions
-        },
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
 
   @Get('study/:id')
   async getStudyMaterial(@Param('id') id: string) {
